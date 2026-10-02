@@ -1,3 +1,67 @@
+# homework_submit
+
+## repo link
+GitHub repo link:https://github.com/ZZZTY-z/stablecoin-lab-2026
+## Screenshots
+
+### Forge test passed
+![forge test passed](screenshots/forge_test_passed.png)
+### Ex3 — Break the peg
+![Ex3 break the peg](screenshots/ex3_break_the_peg.png)
+
+## Architecture diagram
+                           ┌─────────────────────────┐
+                           │        User / Alice     │
+                           │                         │
+                           │  holds USDC and sUSD    │
+                           └───────────┬─────────────┘
+                                       │
+                     approve(USDC)     │     deposit(USDC)
+                     ┌─────────────────┘
+                     │
+                     ▼
+        ┌─────────────────────────┐        transferFrom(USDC)        ┌─────────────────────────┐
+        │        MockUSDC         │ ◄─────────────────────────────── │          Vault          │
+        │      (Collateral)       │                                  │      (Core Loop)        │
+        │                         │ ──────────────────────────────►  │                         │
+        │  6 decimals             │        transfer(USDC)            │  deposit()              │
+        │  faucet()               │                                  │  redeem()               │
+        └─────────────────────────┘                                  │                         │
+                                                                     │  holds MINTER_ROLE      │
+                                                                     └───────────┬─────────────┘
+                                                                                 │
+                                                          mint(sUSD) / burn(sUSD)│
+                                                                                 │
+                                                                                 ▼
+                                                      ┌─────────────────────────────────────────┐
+                                                      │          SimpleStablecoin (sUSD)        │
+                                                      │                                         │
+                                                      │  ERC-20                                 │
+                                                      │  6 decimals                             │
+                                                      │  MINTER_ROLE                            │
+                                                      │  PAUSER_ROLE                            │
+                                                      └─────────────────────────────────────────┘
+                                                                                 │
+                                                                                 │
+                                                                                 ▼
+                                                      ┌─────────────────────────────────────────┐
+                                                      │            INVARIANT                    │
+                                                      │                                         │
+                                                      │  totalCollateral() >= totalSupply()     │
+                                                      │                                         │
+                                                      │  Vault USDC balance >= sUSD supply      │
+                                                      └─────────────────────────────────────────┘
+
+Legend / Key Annotations:
+- User approves Vault to spend MockUSDC.
+- Vault uses transferFrom to pull USDC from User.
+- Vault calls mint on SimpleStablecoin to create sUSD for User.
+- User can call redeem on Vault; Vault burns sUSD and transfers USDC back.
+- Vault holds MINTER_ROLE: it can mint and burn sUSD. This also means it can burn any user's balance (centralization risk, see A1).
+- PAUSER_ROLE can pause all balance changes, including redemption (see B1).
+- Invariant: totalCollateral() >= totalSupply() ensures every sUSD is backed 1:1 by USDC in the Vault.
+
+
 # Lab 1 — How to Create a Stablecoin
 
 In this lab you build a **fiat-collateralized stablecoin** from scratch: deposit collateral to mint, burn to redeem, fully backed at every moment.
